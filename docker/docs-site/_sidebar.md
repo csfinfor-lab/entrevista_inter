@@ -16,12 +16,15 @@
   - [10 - Divisão da Equipe (4 devs)](docs/obsidian-vault/10%20-%20Divis%C3%A3o%20da%20Equipe%20%284%20devs%29.md)
   - [11 - Implementação Dev 4](docs/obsidian-vault/11%20-%20Implementa%C3%A7%C3%A3o%20Dev%204.md)
   - [12 - Implementação Devs 1, 2 e 3](docs/obsidian-vault/12%20-%20Implementa%C3%A7%C3%A3o%20Devs%201%2C%202%20e%203.md)
+  - [13 - Docker](docs/obsidian-vault/13%20-%20Docker.md)
 
 - **Contratos**
   - [Swagger UI dos serviços](http://localhost:8088 ':ignore')
   - [Schema do evento PagamentoConfirmado](contracts/events/pagamento-confirmado.v1.schema.json ':ignore')
 
 - **Uso de IA**
+  - [Todos os prompts](docs/ai/prompts.md)
+  - [Prompts dos subagentes](docs/ai/prompts-agentes.md)
   - [2026-10-08-dev1-coordinator](docs/ai/2026-10-08-dev1-coordinator.md)
   - [2026-10-08-dev2-reserve](docs/ai/2026-10-08-dev2-reserve.md)
   - [2026-10-08-dev3-merchant](docs/ai/2026-10-08-dev3-merchant.md)

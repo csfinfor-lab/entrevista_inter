@@ -24,6 +24,7 @@ aliases: [Home, SPP]
 | 10 | [[10 - Divisão da Equipe (4 devs)]] | Quem faz o quê, interfaces combinadas, checkpoints |
 | 11 | [[11 - Implementação Dev 4]] | O que já está pronto (estrutura, contratos, orquestrador) e guia de partida |
 | 12 | [[12 - Implementação Devs 1, 2 e 3]] | Coordinator, Reserve e Merchant implementados; o que foi e o que NÃO foi verificado; riscos da 1ª execução |
+| 13 | [[13 - Docker]] | Subir serviços, documentação (Swagger UI + site de docs) e testes em containers |
 
 ## Como usar este vault
 - Abra a pasta `docs/obsidian-vault` como vault no Obsidian (*Open folder as vault*).

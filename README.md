@@ -168,3 +168,22 @@ docker compose up -d                       # Postgres :5432 e Kafka :9092
 Teste ponta a ponta (com `docker compose up -d` e os três serviços rodando): `./scripts/e2e.sh`
 — cobre caminho feliz, saldo insuficiente, merchant inativo (com liberação da reserva), merchant inexistente,
 idempotência e validação do body.
+
+### Tudo em containers (serviços, documentação e testes)
+
+```bash
+# Sobe infra + os 3 serviços + documentação
+docker compose --profile app --profile docs up -d --build
+
+# Documentação
+#   http://localhost:8088   Swagger UI dos contratos OpenAPI (com "Try it out")
+#   http://localhost:8089   README, diagramas Mermaid e o vault do Obsidian
+
+# Testes
+docker compose --profile test run --rm tests-unit    # sem Docker aninhado
+docker compose --profile test run --rm tests         # todos (Testcontainers via socket do Docker)
+
+# Ponta a ponta (serviços no ar)
+docker compose --profile app --profile e2e run --rm e2e
+```
+Detalhes e solução de problemas: `docs/obsidian-vault/13 - Docker.md`.

@@ -18,3 +18,6 @@ out/
 mvn_output
 output.txt
 *.bak
+
+# Configuração local do Obsidian
+.obsidian/
