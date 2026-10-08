@@ -146,7 +146,88 @@ sequenceDiagram
 ```
 
 
-## Estrutura e como rodar
+## Como subir o projeto
+
+### Pré-requisitos
+- **Docker** com Docker Compose v2 (Docker Desktop no Windows/macOS) em execução.
+- Portas livres: `5432` (Postgres), `9092` (Kafka), `8080` · `8081` · `8082` (serviços), `8088` · `8089` (documentação).
+- Para rodar fora do Docker (opcional): JDK 25 (`mise.toml`) e o Maven Wrapper do repositório (`./mvnw`).
+
+### Subida rápida (tudo em containers)
+```bash
+git clone https://github.com/csfinfor-lab/entrevista_inter.git
+cd entrevista_inter
+docker compose --profile app --profile docs up -d --build
+```
+O primeiro build baixa imagens e dependências Maven (alguns minutos). Acompanhe com `docker compose --profile app --profile docs ps` — os serviços estão prontos quando aparecem como `running`; o log de cada um termina com `Startup completed`.
+
+| O quê | Onde |
+|-------|------|
+| **Coordinator** (API de entrada) | http://localhost:8080 |
+| Reserve | http://localhost:8081 |
+| Merchant | http://localhost:8082 |
+| **Swagger UI** dos contratos OpenAPI (com "Try it out") | http://localhost:8088 |
+| **Documentação**: este README, diagramas Mermaid, vault do Obsidian, registros de IA | http://localhost:8089 |
+| Health check de cada serviço | `/health` na porta do serviço |
+
+### Testando manualmente
+Dados de seed: clientes **A** (1000 Piggies), **B** (50), **POOR** (0); merchants **X** (ativo) e **Y** (inativo).
+
+```bash
+# 1. inicia o pagamento (resposta imediata: 202 + paymentId, status PENDING)
+curl -i -X POST http://localhost:8080/payments   -H 'Content-Type: application/json'   -d '{"clientId":"A","merchantId":"X","amount":100}'
+
+# 2. consulta o resultado (CONFIRMED, ou REJECTED com o motivo em "reason")
+curl http://localhost:8080/payments/<paymentId>
+
+# conferências opcionais
+curl http://localhost:8081/reserves/<paymentId>          # estado da reserva
+curl http://localhost:8082/merchants/X/receivables       # recebíveis do merchant X
+```
+O mesmo fluxo pode ser feito pelo Swagger UI (http://localhost:8088, escolha *Coordinator* → `POST /payments`).
+
+### Testes
+```bash
+# Testes que não precisam de Docker (rápidos)
+docker compose --profile test run --rm tests-unit
+
+# Todos os testes, inclusive os de integração com Testcontainers (Postgres e Kafka)
+docker compose --profile test run --rm tests
+
+# Teste ponta a ponta contra os serviços no ar: caminho feliz, saldo insuficiente, merchant inativo
+# e inexistente, idempotência e validação do body
+docker compose --profile app --profile e2e run --rm e2e
+```
+Sem containers: `./mvnw test` (os testes de integração exigem Docker em execução, por causa do Testcontainers).
+
+### Parar e limpar
+```bash
+docker compose --profile app --profile docs down        # para os containers (mantém os dados do banco)
+docker compose --profile app --profile docs down -v     # também apaga o volume do Postgres (volta ao seed)
+```
+
+### Alternativa: serviços na máquina, infraestrutura no Docker
+```bash
+docker compose up -d                       # só Postgres :5432 e Kafka :9092
+./mvnw -pl coordinator -am mn:run          # um terminal por serviço
+./mvnw -pl reserve -am mn:run
+./mvnw -pl merchant -am mn:run
+./scripts/e2e.sh                           # (opcional) cenários ponta a ponta
+```
+
+### Problemas comuns
+| Sintoma | O que fazer |
+|---------|-------------|
+| `port is already allocated` | Outra aplicação usa a porta; encerre-a ou ajuste o mapeamento em `docker-compose.yml` |
+| Serviço reiniciando / `Connection refused` ao Postgres | Aguarde o Postgres ficar *healthy* e rode o `up` de novo; veja `docker compose logs postgres` |
+| Banco com dados/schema antigos | `docker compose --profile app --profile docs down -v` e suba novamente |
+| Docker não responde | Reinicie o Docker Desktop e aguarde o engine ficar *Running* |
+| Diagramas não aparecem em :8089 | O site carrega scripts de CDN; o navegador precisa de acesso à internet |
+| `tests` não encontra o Docker | Use `tests-unit`, ou rode `./mvnw test` direto na máquina |
+
+Mais detalhes (rede, variáveis de ambiente, perfis do compose): `docs/obsidian-vault/13 - Docker.md`.
+
+## Estrutura do repositório
 
 ```
 contracts/          OpenAPI de cada serviço + JSON Schema do evento Kafka (contract-first)
@@ -154,36 +235,8 @@ coordinator/        PiggiesPaymentCoordinator  (porta 8080)
 reserve/            PiggiesReserveService      (porta 8081)
 merchant/           PiggiesMerchantService     (porta 8082)
 testing-support/    bases de teste (Testcontainers) e validação de contratos
-docker-compose.yml  Postgres (3 bancos) + Kafka para rodar à mão
+scripts/e2e.sh      teste ponta a ponta (bash + curl)
+docker-compose.yml  infraestrutura, serviços, documentação e testes (perfis app / docs / test / e2e)
+Dockerfile          imagens: tooling (JDK 25 + Maven), builder e service
 docs/               diagramas, vault do Obsidian (docs/obsidian-vault) e registros de IA (docs/ai)
 ```
-
-```bash
-docker compose up -d                       # Postgres :5432 e Kafka :9092
-./mvnw -pl coordinator -am mn:run          # idem para reserve / merchant (em terminais separados)
-./mvnw test                                # unitários + integração (integração requer Docker)
-./mvnw test -Dtest='!*ApplicationTest'     # só o que não precisa de Docker
-```
-
-Teste ponta a ponta (com `docker compose up -d` e os três serviços rodando): `./scripts/e2e.sh`
-— cobre caminho feliz, saldo insuficiente, merchant inativo (com liberação da reserva), merchant inexistente,
-idempotência e validação do body.
-
-### Tudo em containers (serviços, documentação e testes)
-
-```bash
-# Sobe infra + os 3 serviços + documentação
-docker compose --profile app --profile docs up -d --build
-
-# Documentação
-#   http://localhost:8088   Swagger UI dos contratos OpenAPI (com "Try it out")
-#   http://localhost:8089   README, diagramas Mermaid e o vault do Obsidian
-
-# Testes
-docker compose --profile test run --rm tests-unit    # sem Docker aninhado
-docker compose --profile test run --rm tests         # todos (Testcontainers via socket do Docker)
-
-# Ponta a ponta (serviços no ar)
-docker compose --profile app --profile e2e run --rm e2e
-```
-Detalhes e solução de problemas: `docs/obsidian-vault/13 - Docker.md`.
